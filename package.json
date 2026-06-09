@@ -1,0 +1,11 @@
+{
+  "name": "farmlink",
+  "version": "1.0.0",
+  "description": "FarmLink — P2P Agritech Platform",
+  "private": true,
+  "workspaces": ["server"],
+  "scripts": {
+    "dev": "cd server && npm run dev",
+    "start": "cd server && npm start"
+  }
+}
