@@ -4,7 +4,7 @@ import api from '../api'
 const CATEGORIES = ['vegetables', 'fruits', 'grains', 'dairy', 'poultry', 'other']
 const UNITS = ['kg', 'g', 'litre', 'piece', 'dozen']
 
-const empty = { name: '', category: 'vegetables', description: '', pricePerUnit: '', unit: 'kg', quantityAvailable: '' }
+const empty = { name: '', category: 'vegetables', description: '', pricePerUnit: '', unit: 'kg', quantityAvailable: '', images: [] }
 
 export default function Products() {
   const [products, setProducts] = useState([])
@@ -35,9 +35,28 @@ export default function Products() {
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
+  const uploadImage = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const formData = new FormData()
+    formData.append('image', file)
+    try {
+      const { data } = await api.post('/upload/product', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setForm(f => ({ ...f, images: [...f.images, data.url] }))
+    } catch (err) {
+      setError('Image upload failed.')
+    }
+  }
+
+  const removeImage = (url) => {
+    setForm(f => ({ ...f, images: f.images.filter(i => i !== url) }))
+  }
+
   const openAdd = () => { setForm(empty); setEditing(null); setShowForm(true); setError('') }
   const openEdit = p => {
-    setForm({ name: p.name, category: p.category, description: p.description || '', pricePerUnit: p.pricePerUnit, unit: p.unit, quantityAvailable: p.quantityAvailable })
+    setForm({ name: p.name, category: p.category, description: p.description || '', pricePerUnit: p.pricePerUnit, unit: p.unit, quantityAvailable: p.quantityAvailable, images: p.images || [] })
     setEditing(p._id)
     setShowForm(true)
     setError('')
@@ -104,42 +123,72 @@ export default function Products() {
           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 20 }}>{editing ? 'Edit Product' : 'Add New Product'}</div>
           <form onSubmit={save}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+
               <div>
                 <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Product Name</label>
                 <input style={inputStyle} value={form.name} onChange={set('name')} required placeholder="e.g. Tomatoes"
                   onFocus={e => e.target.style.borderColor = 'var(--accent)'}
                   onBlur={e => e.target.style.borderColor = 'var(--border)'} />
               </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</label>
                 <select style={inputStyle} value={form.category} onChange={set('category')}>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Price per Unit (₹)</label>
                 <input style={inputStyle} type="number" value={form.pricePerUnit} onChange={set('pricePerUnit')} required placeholder="0"
                   onFocus={e => e.target.style.borderColor = 'var(--accent)'}
                   onBlur={e => e.target.style.borderColor = 'var(--border)'} />
               </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Unit</label>
                 <select style={inputStyle} value={form.unit} onChange={set('unit')}>
                   {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
               </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Quantity Available</label>
                 <input style={inputStyle} type="number" value={form.quantityAvailable} onChange={set('quantityAvailable')} required placeholder="0"
                   onFocus={e => e.target.style.borderColor = 'var(--accent)'}
                   onBlur={e => e.target.style.borderColor = 'var(--border)'} />
               </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Description</label>
                 <input style={inputStyle} value={form.description} onChange={set('description')} placeholder="Optional"
                   onFocus={e => e.target.style.borderColor = 'var(--accent)'}
                   onBlur={e => e.target.style.borderColor = 'var(--border)'} />
               </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Product Images</label>
+                <input type="file" accept="image/*" onChange={uploadImage} style={{ display: 'none' }} id="img-upload" />
+                <label htmlFor="img-upload" style={{
+                  display: 'inline-block', padding: '7px 16px', borderRadius: 8, fontSize: 12,
+                  background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--muted)',
+                  cursor: 'pointer', marginBottom: 10
+                }}>+ Upload Image</label>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {form.images.map((url, i) => (
+                    <div key={i} style={{ position: 'relative' }}>
+                      <img src={url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
+                      <button type="button" onClick={() => removeImage(url)} style={{
+                        position: 'absolute', top: -6, right: -6, width: 20, height: 20,
+                        borderRadius: '50%', background: 'var(--red)', border: 'none',
+                        color: 'white', fontSize: 11, cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center'
+                      }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
             {error && (
@@ -174,7 +223,7 @@ export default function Products() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border2)' }}>
-                {['Product', 'Category', 'Price', 'Stock', 'Status', 'Actions'].map(h => (
+                {['Image', 'Product', 'Category', 'Price', 'Stock', 'Status', 'Actions'].map(h => (
                   <th key={h} style={{ padding: '10px 20px', textAlign: 'left', fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 400 }}>{h}</th>
                 ))}
               </tr>
@@ -185,6 +234,12 @@ export default function Products() {
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
+                  <td style={{ padding: '14px 20px' }}>
+                    {p.images?.[0]
+                      ? <img src={p.images[0]} alt={p.name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
+                      : <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--bg3)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🌾</div>
+                    }
+                  </td>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
                     {p.description && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.description}</div>}
